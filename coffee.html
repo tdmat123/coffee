@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>100 Days of Coffee Love</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(#fffaf0, #f3e5ab);
+      min-height: 100vh;
+      padding: 30px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    #scrollContainer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 20px;
+      gap: 10px;
+    }
+
+    .envelope {
+      width: 100px;
+      height: 70px;
+      background: #d2b48c;
+      border-radius: 8px;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      transition: transform 0.3s, opacity 0.3s;
+      animation: popIn 0.6s ease forwards;
+      transform-style: preserve-3d;
+      perspective: 600px;
+      z-index: 1;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .envelope::before {
+      content: "🎀";
+      position: absolute;
+      top: -10px;
+      left: 35px;
+      font-size: 24px;
+    }
+
+    .envelope:hover {
+      transform: scale(1.05);
+    }
+
+    .letter {
+      display: none;
+      position: absolute;
+      top: 80px;
+      left: -60px;
+      width: 220px;
+      padding: 12px;
+      background: #fffaf0;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      font-family: 'Courier New', monospace;
+      color: #5c3d2e;
+      animation: slideOut 0.5s ease forwards;
+      z-index: 10000;
+    }
+
+    .letter button {
+      display: block;
+      margin-top: 10px;
+      padding: 5px 10px;
+      border: none;
+      background-color: #f08080;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    @keyframes slideOut {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(-10px); opacity: 1; }
+    }
+
+    .dimmed {
+      opacity: 0.2 !important;
+      pointer-events: none;
+    }
+
+    .message {
+      position: fixed;
+      bottom: 20px;
+      background: #f08080;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+    }
+
+    #viewAllBtn, #addRizzBtn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 15px;
+      background: #ff69b4;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 20;
+    }
+
+    #addRizzBtn {
+      right: 140px;
+      background: #8a2be2;
+    }
+
+    #introOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(255, 248, 225, 0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    #introOverlay button {
+      margin: 10px;
+      padding: 10px 20px;
+      border: none;
+      background-color: #f08080;
+      color: white;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #popupForm {
+      position: fixed;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fffaf0;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 200;
+    }
+
+    #popupForm textarea {
+      width: 250px;
+      height: 60px;
+      margin-bottom: 10px;
+    }
+
+    #popupForm button {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+<div id="introOverlay">
+  <h2>Are you the creator?</h2>
+  <button onclick="verifyCreator(true)">Yes</button>
+  <button onclick="verifyCreator(false)">No</button>
+</div>
+
+<audio autoplay loop>
+  <source src="https://cdn.pixabay.com/download/audio/2023/04/06/audio_4d428a97c4.mp3?filename=romantic-guitar-143689.mp3" type="audio/mpeg">
+</audio>
+
+<div id="message" class="message" style="display:none;">Come back tomorrow for your next love note! 💌</div>
+<button id="viewAllBtn" onclick="viewAll()" style="display:none">View All Rizz</button>
+<button id="addRizzBtn" onclick="document.getElementById('popupForm').style.display='block'" style="display:none">Add New Rizz</button>
+<div id="popupForm">
+  <textarea id="newRizzText" placeholder="Type your love line..."></textarea><br>
+  <button onclick="addNewRizz()">Add</button>
+  <button onclick="document.getElementById('popupForm').style.display='none'">Cancel</button>
+</div>
+<div id="scrollContainer"></div>
+
+<script>
+  const defaultRizz = Array.from({ length: 100 }, (_, i) => `You are my cup of coffee love - Day ${i + 1} ☕❤️`);
+
+  function getStoredRizz() {
+    const saved = localStorage.getItem("rizzLines");
+    return saved ? JSON.parse(saved) : [...defaultRizz];
+  }
+
+  function saveRizz(rizzArray) {
+    localStorage.setItem("rizzLines", JSON.stringify(rizzArray));
+  }
+
+  function addNewRizz() {
+    const input = document.getElementById("newRizzText").value.trim();
+    if (!input) return;
+    let current = getStoredRizz();
+    if (current.length >= 100) {
+      alert("Maximum of 100 lines reached.");
+      return;
+    }
+    current.push(input);
+    saveRizz(current);
+    location.reload();
+  }
+
+  let isCreator = false;
+
+  function verifyCreator(choice) {
+    document.getElementById("introOverlay").style.display = "none";
+    if (choice) {
+      const password = prompt("Enter the creator password (hint: coffee + love)");
+      if (password === "coffeelove123") {
+        isCreator = true;
+        document.getElementById("viewAllBtn").style.display = "block";
+        document.getElementById("addRizzBtn").style.display = "block";
+      }
+    }
+    const rizzLines = getStoredRizz();
+    const today = new Date();
+    const startDate = new Date(2025, 5, 7);
+    const dayDiff = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+    const todayIndex = Math.min(Math.max(dayDiff, 0), 99);
+    for (let i = 0; i < rizzLines.length; i++) {
+      createEnvelope(i, rizzLines, todayIndex);
+    }
+  }
+
+  function viewAll() {
+    const rizzLines = getStoredRizz();
+    alert(rizzLines.map((line, i) => `${i + 1}. ${line}`).join("\n\n"));
+  }
+
+  function showMessage() {
+    const msg = document.getElementById("message");
+    msg.style.display = "block";
+    setTimeout(() => msg.style.display = "none", 5000);
+  }
+
+  function createEnvelope(day, rizzLines, todayIndex) {
+    const container = document.createElement("div");
+    container.className = "envelope";
+    const letter = document.createElement("div");
+    letter.className = "letter";
+    letter.innerHTML = `Day ${day + 1}:<br><br>${rizzLines[day]}<br><button onclick="closeLetter(this)">Close</button>`;
+    container.appendChild(letter);
+
+    if (isCreator || day <= todayIndex) {
+      container.addEventListener("click", () => {
+        document.querySelectorAll(".envelope").forEach(env => {
+          if (env !== container) env.classList.add("dimmed");
+        });
+        letter.style.display = "block";
+        container.style.zIndex = "9999";
+      });
+    } else {
+      container.style.opacity = "0.4";
+      container.style.cursor = "not-allowed";
+      container.addEventListener("click", showMessage);
+    }
+    document.getElementById("scrollContainer").appendChild(container);
+  }
+
+  function closeLetter(btn) {
+    const letter = btn.parentElement;
+    letter.style.display = "none";
+    document.querySelectorAll(".envelope").forEach(env => env.classList.remove("dimmed"));
+  }
+</script>
+</body>
+</html>
